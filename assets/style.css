@@ -86,3 +86,45 @@
   --shadow-lg: 0 30px 60px -20px rgba(0, 0, 0, 0.7);
 }
 
+/* -------------------------- 2. RESET & BASE ---------------------------- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+* { margin: 0; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  padding-bottom: env(safe-area-inset-bottom);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.2; letter-spacing: -0.02em; }
+h1 { font-size: var(--fs-2xl); }
+h2 { font-size: var(--fs-xl); }
+h3 { font-size: var(--fs-lg); }
+
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; }
+svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+.skip-link {
+  position: absolute; left: -9999px; top: var(--s-2); z-index: 100;
+  background: var(--surface); padding: var(--s-2) var(--s-4); border-radius: var(--r-sm);
+  box-shadow: var(--shadow-md);
+}
+.skip-link:focus { left: var(--s-2); }
+
+.only-mobile { display: none; }

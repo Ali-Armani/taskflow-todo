@@ -1430,4 +1430,50 @@
     }
   }
 
-  
+  /* ============================= BOOTSTRAP ============================== */
+
+  /** First-run sample content so the app never opens completely blank. */
+  function seedIfEmpty() {
+    if (localStorage.getItem(STORAGE_KEY)) return;
+    const work = { id: uid(), name: "Portfolio" };
+    const life = { id: uid(), name: "Personal" };
+    state.projects = [work, life];
+    state.tasks = [
+      normalizeTask({
+        title: "Polish the TaskFlow case study",
+        description: "Write the problem, process and outcome sections.",
+        priority: "high", status: "doing", due: todayISO(), projectId: work.id, tags: ["writing"],
+        subtasks: [
+          { id: uid(), title: "Draft outline", done: true },
+          { id: uid(), title: "Add screenshots", done: false },
+        ],
+      }),
+      normalizeTask({
+        title: "Apply to three frontend roles",
+        priority: "urgent", status: "todo", due: todayISO(), projectId: work.id, tags: ["career"],
+      }),
+      normalizeTask({
+        title: "Review accessibility checklist",
+        description: "Keyboard nav, contrast, focus states.",
+        priority: "medium", status: "todo", due: addDaysISO(1), projectId: work.id, tags: ["a11y"],
+      }),
+      normalizeTask({
+        title: "Weekly grocery run",
+        priority: "low", status: "done", due: addDaysISO(2), projectId: life.id, tags: ["home"],
+      }),
+    ];
+    persist();
+  }
+
+  function init() {
+    cacheEls();
+    state = Storage.load();
+    seedIfEmpty();
+    bindEvents();
+    if (!location.hash) location.hash = "#/" + state.settings.route;
+    applyRoute();
+    if (!Storage.available) toast(t("error.storage"), { type: "error", duration: 6000 });
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+})();

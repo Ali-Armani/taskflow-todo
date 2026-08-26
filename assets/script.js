@@ -324,4 +324,72 @@
     folder: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7a2 2 0 012-2h3l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2z"/></svg>',
   };
 
-  
+    /* ========================== 3. STORAGE LAYER ========================== */
+
+  const defaultState = () => ({
+    tasks: [],
+    projects: [],
+    settings: {
+      theme: prefersDark() ? "dark" : "light",
+      lang: (navigator.language || "en").toLowerCase().startsWith("de") ? "de" : "en",
+      view: "list",
+      route: "today",
+      filters: { status: "all", priority: "all", project: "all", tag: "all", due: "all" },
+      sort: "priority",
+    },
+  });
+
+  function prefersDark() {
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+
+  const Storage = {
+    available: true,
+    load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultState();
+        const parsed = JSON.parse(raw);
+        const base = defaultState();
+        return {
+          tasks: Array.isArray(parsed.tasks) ? parsed.tasks.map(normalizeTask) : [],
+          projects: Array.isArray(parsed.projects) ? parsed.projects : [],
+          settings: Object.assign(base.settings, parsed.settings || {}, {
+            filters: Object.assign(base.settings.filters, (parsed.settings || {}).filters || {}),
+          }),
+        };
+      } catch (err) {
+        console.error("TaskFlow: failed to read storage", err);
+        Storage.available = false;
+        return defaultState();
+      }
+    },
+    save(data) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (err) {
+        console.error("TaskFlow: failed to write storage", err);
+        if (Storage.available) {
+          Storage.available = false;
+          toast(t("error.storage"), { type: "error", duration: 6000 });
+        }
+      }
+    },
+  };
+
+  /** Guarantee every persisted task has the full shape the UI expects. */
+  function normalizeTask(task) {
+    return {
+      id: task.id || uid(),
+      title: String(task.title || "Untitled"),
+      description: String(task.description || ""),
+      priority: PRIORITIES.indexOf(task.priority) > -1 ? task.priority : "medium",
+      status: STATUSES.indexOf(task.status) > -1 ? task.status : "todo",
+      due: task.due || null,
+      projectId: task.projectId || null,
+      tags: Array.isArray(task.tags) ? task.tags : [],
+      subtasks: Array.isArray(task.subtasks) ? task.subtasks : [],
+      createdAt: task.createdAt || Date.now(),
+    };
+  }
+

@@ -1042,4 +1042,73 @@
     },
   };
 
- 
+   /* ========================= 9. COMMAND PALETTE ========================= */
+
+  const palette = {
+    index: 0,
+    items: [],
+    lastFocus: null,
+
+    commands() {
+      return [
+        { id: "create", label: t("cmd.createTask"), hint: "N", run: () => modal.open(null) },
+        { id: "search", label: t("cmd.searchTasks"), hint: "/", run: () => els.searchInput.focus() },
+        { id: "today", label: t("cmd.goToday"), hint: "#/today", run: () => go("today") },
+        { id: "all", label: t("cmd.goAll"), hint: "#/all", run: () => go("all") },
+        { id: "projects", label: t("cmd.goProjects"), hint: "#/projects", run: () => go("projects") },
+        { id: "theme", label: t("cmd.toggleTheme"), hint: "", run: toggleTheme },
+        { id: "view", label: t("cmd.toggleView"), hint: "", run: () => setView(state.settings.view === "list" ? "kanban" : "list") },
+        { id: "lang", label: t("cmd.toggleLang"), hint: "", run: () => setLang(state.settings.lang === "en" ? "de" : "en") },
+      ];
+    },
+
+    open() {
+      palette.lastFocus = document.activeElement;
+      els.paletteOverlay.hidden = false;
+      els.paletteInput.value = "";
+      palette.index = 0;
+      palette.renderItems("");
+      setTimeout(() => els.paletteInput.focus(), 30);
+    },
+
+    close() {
+      els.paletteOverlay.hidden = true;
+      if (palette.lastFocus && palette.lastFocus.focus) palette.lastFocus.focus();
+    },
+
+    get isOpen() {
+      return !els.paletteOverlay.hidden;
+    },
+
+    renderItems(query) {
+      const q = query.trim().toLowerCase();
+      palette.items = palette.commands().filter((cmd) => !q || cmd.label.toLowerCase().indexOf(q) > -1);
+      if (palette.index >= palette.items.length) palette.index = 0;
+      els.paletteList.innerHTML = palette.items.length
+        ? palette.items
+            .map(
+              (cmd, i) =>
+                '<li class="palette-item" role="option" data-cmd="' + esc(cmd.id) + '" aria-selected="' +
+                (i === palette.index) + '">' + esc(cmd.label) +
+                (cmd.hint ? '<span class="hint">' + esc(cmd.hint) + "</span>" : "") + "</li>",
+            )
+            .join("")
+        : '<li class="palette-item" aria-disabled="true">' + esc(t("cmd.empty")) + "</li>";
+    },
+
+    move(delta) {
+      if (!palette.items.length) return;
+      palette.index = (palette.index + delta + palette.items.length) % palette.items.length;
+      palette.renderItems(els.paletteInput.value);
+      const active = $('[aria-selected="true"]', els.paletteList);
+      if (active) active.scrollIntoView({ block: "nearest" });
+    },
+
+    run(cmdId) {
+      const cmd = palette.items.find((c) => c.id === cmdId) || palette.items[palette.index];
+      palette.close();
+      if (cmd) cmd.run();
+    },
+  };
+
+  

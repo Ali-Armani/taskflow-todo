@@ -826,5 +826,130 @@
     return wrap;
   }
 
-  
+  /* ========================= 7. TASK OPERATIONS ========================= */
+
+  function createTask(data) {
+    const task = normalizeTask(Object.assign({ id: uid(), createdAt: Date.now() }, data));
+    state.tasks.unshift(task);
+    persist();
+    render();
+    toast(t("toast.created"), { type: "success" });
+    return task;
+  }
+
+  function updateTask(id, patch) {
+    const task = getTask(id);
+    if (!task) return;
+    Object.assign(task, patch);
+    persist();
+    render();
+  }
+
+  function deleteTask(id) {
+    const index = state.tasks.findIndex((task) => task.id === id);
+    if (index === -1) return;
+    const [removed] = state.tasks.splice(index, 1);
+    if (selectedId === id) selectedId = null;
+    persist();
+    render();
+    toast(t("toast.deleted"), {
+      actionLabel: t("common.undo"),
+      duration: 6000,
+      onAction() {
+        state.tasks.splice(index, 0, removed);
+        persist();
+        render();
+        toast(t("toast.restored"), { type: "success" });
+      },
+    });
+  }
+
+  function toggleComplete(id) {
+    const task = getTask(id);
+    if (!task) return;
+    const nowDone = task.status !== "done";
+    task.status = nowDone ? "done" : "todo";
+    persist();
+    render();
+    const card = $('.task[data-id="' + CSS.escape(id) + '"]');
+    if (card && nowDone) card.classList.add("just-done");
+    toast(nowDone ? t("toast.completed") : t("toast.reopened"), { type: nowDone ? "success" : "" });
+  }
+
+  function toggleSubtask(taskId, subId) {
+    const task = getTask(taskId);
+    if (!task) return;
+    const sub = task.subtasks.find((s) => s.id === subId);
+    if (!sub) return;
+    sub.done = !sub.done;
+    persist();
+    render();
+  }
+
+  function createProject(name) {
+    const clean = name.trim();
+    if (!clean) return null;
+    const existing = state.projects.find((p) => p.name.toLowerCase() === clean.toLowerCase());
+    if (existing) return existing;
+    const project = { id: uid(), name: clean };
+    state.projects.push(project);
+    persist();
+    render();
+    toast(t("toast.projectCreated"), { type: "success" });
+    return project;
+  }
+
+  function deleteProject(id) {
+    state.projects = state.projects.filter((p) => p.id !== id);
+    state.tasks.forEach((task) => {
+      if (task.projectId === id) task.projectId = null;
+    });
+    if (state.settings.filters.project === id) state.settings.filters.project = "all";
+    persist();
+    render();
+    toast(t("toast.projectDeleted"));
+  }
+
+  /**
+   * Quick-add parser: extracts #tags, !priority and today/tomorrow keywords
+   * (EN + DE) from a single line of text.
+   */
+  function parseQuickAdd(input) {
+    let text = " " + input.trim() + " ";
+    const tags = [];
+    let priority = "medium";
+    let due = null;
+
+    text = text.replace(/#([\p{L}\p{N}_-]+)/gu, (_, tag) => {
+      tags.push(tag.toLowerCase());
+      return " ";
+    });
+
+    const priorityMap = {
+      urgent: "urgent", dringend: "urgent",
+      high: "high", hoch: "high",
+      medium: "medium", mittel: "medium",
+      low: "low", niedrig: "low",
+    };
+    text = text.replace(/!([\p{L}]+)/giu, (match, word) => {
+      const key = priorityMap[word.toLowerCase()];
+      if (key) { priority = key; return " "; }
+      return match;
+    });
+
+    const dueMap = [
+      [/\b(today|heute)\b/i, 0],
+      [/\b(tomorrow|morgen)\b/i, 1],
+      [/\b(next week|nächste woche|naechste woche)\b/i, 7],
+    ];
+    dueMap.forEach(([re, offset]) => {
+      if (due === null && re.test(text)) {
+        due = addDaysISO(offset);
+        text = text.replace(re, " ");
+      }
+    });
+
+    const title = text.replace(/\s+/g, " ").trim();
+    return { title, tags, priority, due };
+  }
  

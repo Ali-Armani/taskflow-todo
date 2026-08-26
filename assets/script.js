@@ -1111,4 +1111,54 @@
     },
   };
 
+  /* =========================== 10. DRAG & DROP ========================== */
+
+  let dragId = null;
+
+  function initDragAndDrop(root) {
+    root.addEventListener("dragstart", (e) => {
+      const card = e.target.closest(".task[draggable]");
+      if (!card) return;
+      dragId = card.dataset.id;
+      card.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", dragId);
+    });
+    root.addEventListener("dragend", (e) => {
+      const card = e.target.closest(".task");
+      if (card) card.classList.remove("dragging");
+      $$(".column").forEach((c) => c.classList.remove("drag-over"));
+      dragId = null;
+    });
+    root.addEventListener("dragover", (e) => {
+      const col = e.target.closest(".column");
+      if (!col) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      $$(".column").forEach((c) => c.classList.toggle("drag-over", c === col));
+    });
+    root.addEventListener("dragleave", (e) => {
+      const col = e.target.closest(".column");
+      if (col && !col.contains(e.relatedTarget)) col.classList.remove("drag-over");
+    });
+    root.addEventListener("drop", (e) => {
+      const col = e.target.closest(".column");
+      if (!col) return;
+      e.preventDefault();
+      const id = dragId || e.dataTransfer.getData("text/plain");
+      const status = col.dataset.column;
+      const task = getTask(id);
+      if (!task || task.status === status) {
+        $$(".column").forEach((c) => c.classList.remove("drag-over"));
+        return;
+      }
+      task.status = status;
+      persist();
+      render();
+      toast(status === "done" ? t("toast.completed") : t("toast.updated"), {
+        type: status === "done" ? "success" : "",
+      });
+    });
+  }
+
   

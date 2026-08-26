@@ -75,6 +75,47 @@
         </button>
       </div>
     </header>
+
+    <!-- ---------------------------- Sidebar ---------------------------- -->
+    <div class="scrim" id="scrim" hidden></div>
+    <aside class="sidebar" id="sidebar" data-i18n-aria="nav.label">
+      <nav class="nav">
+        <p class="nav-title" data-i18n="nav.views">Views</p>
+        <a class="nav-item" href="#/today" data-route="today">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2" /><circle cx="12" cy="12" r="9" /></svg>
+          <span data-i18n="nav.today">Today</span>
+        </a>
+        <a class="nav-item" href="#/all" data-route="all">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" /></svg>
+          <span data-i18n="nav.all">All tasks</span>
+          <span class="count" id="countAll">0</span>
+        </a>
+        <a class="nav-item" href="#/upcoming" data-route="upcoming">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3" /><path d="M8 3v4M16 3v4M4 11h16" /></svg>
+          <span data-i18n="nav.upcoming">Upcoming</span>
+        </a>
+        <a class="nav-item" href="#/projects" data-route="projects">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7a2 2 0 012-2h3l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2z" /></svg>
+          <span data-i18n="nav.projects">Projects</span>
+        </a>
+      </nav>
+
+      <section class="nav">
+        <p class="nav-title" data-i18n="nav.projects">Projects</p>
+        <div id="projectList" class="chip-list"></div>
+        <form id="projectForm" class="inline-form">
+          <input class="input" id="projectInput" data-i18n-placeholder="project.new" maxlength="40" />
+          <button class="btn btn-soft" type="submit" data-i18n="common.add">Add</button>
+        </form>
+      </section>
+
+      <section class="nav">
+        <p class="nav-title" data-i18n="nav.tags">Tags</p>
+        <div id="tagList" class="chip-list"></div>
+        <p class="nav-hint" id="tagEmptyHint" data-i18n="tags.hint">Add tags from a task.</p>
+      </section>
+    </aside>
+
     
     
   <div>

@@ -1161,4 +1161,273 @@
     });
   }
 
+  /* ================== 11. SETTINGS, ROUTING & EVENTS ==================== */
+
+  function setTheme(theme) {
+    state.settings.theme = theme;
+    persist();
+    render();
+  }
+  const toggleTheme = () => {
+    setTheme(state.settings.theme === "dark" ? "light" : "dark");
+    toast(t("toast.themeChanged"));
+  };
+
+  function setLang(lang) {
+    state.settings.lang = lang;
+    persist();
+    render();
+  }
+
+  function setView(view) {
+    state.settings.view = view;
+    persist();
+    render();
+  }
+
+  function go(route) {
+    if (location.hash !== "#/" + route) location.hash = "#/" + route;
+    else applyRoute();
+  }
+
+  function applyRoute() {
+    const route = (location.hash || "#/today").replace("#/", "");
+    state.settings.route = ["today", "all", "upcoming", "projects"].indexOf(route) > -1 ? route : "today";
+    persist();
+    closeSidebar();
+    render();
+  }
+
+  const openSidebar = () => {
+    els.sidebar.classList.add("open");
+    els.scrim.hidden = false;
+    els.menuBtn.setAttribute("aria-expanded", "true");
+  };
+  const closeSidebar = () => {
+    els.sidebar.classList.remove("open");
+    els.scrim.hidden = true;
+    els.menuBtn.setAttribute("aria-expanded", "false");
+  };
+
+  /** Cache DOM references once at startup. */
+  function cacheEls() {
+    [
+      "searchInput", "themeBtn", "newTaskBtn", "paletteBtn", "menuBtn", "sidebar", "scrim",
+      "projectList", "projectForm", "projectInput", "tagList", "tagEmptyHint", "countAll",
+      "quickAddForm", "quickAddInput", "viewRoot", "toasts",
+      "filterStatus", "filterPriority", "filterProject", "filterTag", "filterDue", "sortBy", "resetFiltersBtn",
+      "taskOverlay", "taskForm", "taskTitle", "taskTitleError", "taskDesc", "taskPriority", "taskStatus",
+      "taskDue", "taskProject", "taskTags", "subtaskEditList", "subtaskInput", "subtaskAddBtn",
+      "taskCloseBtn", "taskCancelBtn",
+      "paletteOverlay", "paletteInput", "paletteList", "fabNew", "mobilePaletteBtn",
+    ].forEach((id) => (els[id] = document.getElementById(id)));
+  }
+
+  function bindEvents() {
+    /* --- topbar / chrome --- */
+    els.searchInput.addEventListener("input", (e) => {
+      search = e.target.value;
+      renderRoute();
+    });
+    els.themeBtn.addEventListener("click", toggleTheme);
+    els.newTaskBtn.addEventListener("click", () => modal.open(null));
+    els.fabNew.addEventListener("click", () => modal.open(null));
+    els.paletteBtn.addEventListener("click", palette.open);
+    els.mobilePaletteBtn.addEventListener("click", palette.open);
+    els.menuBtn.addEventListener("click", () =>
+      els.sidebar.classList.contains("open") ? closeSidebar() : openSidebar(),
+    );
+    els.scrim.addEventListener("click", closeSidebar);
+    $$("[data-lang]").forEach((btn) => btn.addEventListener("click", () => setLang(btn.dataset.lang)));
+    $$("[data-view]").forEach((btn) => btn.addEventListener("click", () => setView(btn.dataset.view)));
+
+    /* --- filters & sort --- */
+    const filterMap = {
+      filterStatus: "status", filterPriority: "priority", filterProject: "project",
+      filterTag: "tag", filterDue: "due",
+    };
+    Object.keys(filterMap).forEach((key) => {
+      els[key].addEventListener("change", () => {
+        state.settings.filters[filterMap[key]] = els[key].value;
+        persist();
+        render();
+      });
+    });
+    els.sortBy.addEventListener("change", () => {
+      state.settings.sort = els.sortBy.value;
+      persist();
+      render();
+    });
+    els.resetFiltersBtn.addEventListener("click", () => {
+      state.settings.filters = { status: "all", priority: "all", project: "all", tag: "all", due: "all" };
+      search = "";
+      persist();
+      render();
+    });
+
+    /* --- quick add --- */
+    els.quickAddForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const raw = els.quickAddInput.value;
+      if (!raw.trim()) return;
+      const parsed = parseQuickAdd(raw);
+      if (!parsed.title) return;
+      createTask({
+        title: parsed.title,
+        priority: parsed.priority,
+        due: parsed.due,
+        tags: parsed.tags,
+        status: "todo",
+      });
+      els.quickAddInput.value = "";
+    });
+
+    /* --- sidebar projects & tags (delegated) --- */
+    els.projectForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (createProject(els.projectInput.value)) els.projectInput.value = "";
+    });
+    els.projectList.addEventListener("click", (e) => {
+      const del = e.target.closest("[data-project-delete]");
+      if (del) return deleteProject(del.dataset.projectDelete);
+      const filter = e.target.closest("[data-project-filter]");
+      if (filter) {
+        const id = filter.dataset.projectFilter;
+        state.settings.filters.project = state.settings.filters.project === id ? "all" : id;
+        persist();
+        go("all");
+      }
+    });
+    els.tagList.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-tag-filter]");
+      if (!btn) return;
+      const tag = btn.dataset.tagFilter;
+      state.settings.filters.tag = state.settings.filters.tag === tag ? "all" : tag;
+      persist();
+      go("all");
+    });
+
+    /* --- task interactions (delegated on the view root) --- */
+    els.viewRoot.addEventListener("click", (e) => {
+      const openProject = e.target.closest("[data-project-open]");
+      if (openProject) {
+        state.settings.filters.project = openProject.dataset.projectOpen;
+        persist();
+        return go("all");
+      }
+      const card = e.target.closest(".task");
+      if (!card) return;
+      const id = card.dataset.id;
+      const actionBtn = e.target.closest("[data-action]");
+      selectedId = id;
+      if (!actionBtn) return renderRoute();
+      const action = actionBtn.dataset.action;
+      if (action === "toggle") toggleComplete(id);
+      else if (action === "edit") modal.open(id);
+      else if (action === "delete") deleteTask(id);
+      else if (action === "subtask") toggleSubtask(id, actionBtn.dataset.sub);
+    });
+    els.viewRoot.addEventListener("focusin", (e) => {
+      const card = e.target.closest(".task");
+      if (card) selectedId = card.dataset.id;
+    });
+    initDragAndDrop(els.viewRoot);
+
+    /* --- task modal --- */
+    els.taskForm.addEventListener("submit", modal.submit);
+    els.taskCloseBtn.addEventListener("click", modal.close);
+    els.taskCancelBtn.addEventListener("click", modal.close);
+    els.taskOverlay.addEventListener("mousedown", (e) => {
+      if (e.target === els.taskOverlay) modal.close();
+    });
+    $$("[data-due]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.due;
+        els.taskDue.value = key === "today" ? todayISO() : key === "tomorrow" ? addDaysISO(1) : "";
+      }),
+    );
+    els.subtaskAddBtn.addEventListener("click", addSubtaskFromInput);
+    els.subtaskInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addSubtaskFromInput();
+      }
+    });
+    els.subtaskEditList.addEventListener("click", (e) => {
+      const remove = e.target.closest("[data-sub-remove]");
+      if (remove) {
+        modal.subtasks.splice(Number(remove.dataset.subRemove), 1);
+        modal.renderSubtasks();
+      }
+    });
+    els.subtaskEditList.addEventListener("change", (e) => {
+      const toggle = e.target.closest("[data-sub-toggle]");
+      if (toggle) modal.subtasks[Number(toggle.dataset.subToggle)].done = toggle.checked;
+    });
+
+    function addSubtaskFromInput() {
+      const value = els.subtaskInput.value.trim();
+      if (!value) return;
+      modal.subtasks.push({ id: uid(), title: value, done: false });
+      els.subtaskInput.value = "";
+      modal.renderSubtasks();
+      els.subtaskInput.focus();
+    }
+
+    /* --- command palette --- */
+    els.paletteInput.addEventListener("input", () => {
+      palette.index = 0;
+      palette.renderItems(els.paletteInput.value);
+    });
+    els.paletteInput.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); palette.move(1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); palette.move(-1); }
+      else if (e.key === "Enter") { e.preventDefault(); palette.run(); }
+    });
+    els.paletteList.addEventListener("click", (e) => {
+      const item = e.target.closest("[data-cmd]");
+      if (item) palette.run(item.dataset.cmd);
+    });
+    els.paletteOverlay.addEventListener("mousedown", (e) => {
+      if (e.target === els.paletteOverlay) palette.close();
+    });
+
+    /* --- global keyboard shortcuts --- */
+    document.addEventListener("keydown", onGlobalKeydown);
+    window.addEventListener("hashchange", applyRoute);
+  }
+
+  /** Keyboard shortcuts: N, /, E, C, Esc, Cmd/Ctrl+K. */
+  function onGlobalKeydown(e) {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      return palette.isOpen ? palette.close() : palette.open();
+    }
+    if (e.key === "Escape") {
+      if (palette.isOpen) return palette.close();
+      if (modal.isOpen) return modal.close();
+      if (els.sidebar.classList.contains("open")) return closeSidebar();
+      if (document.activeElement === els.searchInput) {
+        els.searchInput.value = "";
+        search = "";
+        renderRoute();
+        els.searchInput.blur();
+      }
+      return;
+    }
+    if (typing || modal.isOpen || palette.isOpen || e.metaKey || e.ctrlKey || e.altKey) return;
+
+    if (e.key === "/") { e.preventDefault(); els.searchInput.focus(); }
+    else if (e.key.toLowerCase() === "n") { e.preventDefault(); modal.open(null); }
+    else if (e.key.toLowerCase() === "e") {
+      e.preventDefault();
+      selectedId ? modal.open(selectedId) : toast(t("toast.noTaskSelected"), { type: "error" });
+    } else if (e.key.toLowerCase() === "c") {
+      e.preventDefault();
+      selectedId ? toggleComplete(selectedId) : toast(t("toast.noTaskSelected"), { type: "error" });
+    }
+  }
+
   

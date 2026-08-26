@@ -456,3 +456,72 @@ kbd {
   *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
 }
 
+/* --------------------------- 8. RESPONSIVE ----------------------------- */
+@media (max-width: 1080px) {
+  .board { grid-template-columns: 1fr; }
+  .only-desktop { display: none !important; }
+}
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; grid-template-areas: "top" "main"; }
+  .only-mobile { display: inline-flex; }
+  .sidebar {
+    position: fixed; z-index: 40; top: 0; left: 0; bottom: 0; height: 100dvh;
+    width: min(300px, 86vw); background: var(--surface);
+    transform: translateX(-100%); transition: transform var(--mid) var(--ease);
+    padding-top: var(--s-6);
+  }
+  .sidebar.open { transform: none; box-shadow: var(--shadow-lg); }
+  .main { padding: var(--s-4) var(--s-4) 96px; }
+  .search-wrap { max-width: none; }
+  .brand-name { display: none; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .toolbar { grid-template-columns: 1fr 1fr; }
+  .hero { padding: var(--s-5); }
+  h1 { font-size: var(--fs-xl); }
+  .toasts { right: var(--s-3); left: var(--s-3); width: auto; bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .modal { max-height: 92dvh; border-radius: var(--r-lg); }
+  /* Bigger tap targets on touch */
+  .icon-btn, .btn { min-height: 44px; }
+  .icon-btn { width: 44px; height: 44px; }
+  .check { width: 28px; height: 28px; }
+}
+
+.bottomnav {
+  display: none;
+  position: fixed; z-index: 45; bottom: 0; left: 0; right: 0;
+  align-items: center; justify-content: space-around;
+  padding: var(--s-2) var(--s-2) calc(var(--s-2) + env(safe-area-inset-bottom));
+  background: color-mix(in oklab, var(--surface) 92%, transparent);
+  backdrop-filter: blur(12px); border-top: 1px solid var(--border);
+}
+.bottomnav a, .bottomnav button:not(.fab) {
+  display: grid; justify-items: center; gap: 2px; flex: 1;
+  padding: 6px 0; border: 0; background: none;
+  font-size: 10px; font-weight: 700; color: var(--text-muted); cursor: pointer;
+}
+.bottomnav a[aria-current="page"] { color: var(--primary); }
+.fab {
+  display: grid; place-items: center; width: 52px; height: 52px; min-width: 52px;
+  border: 0; border-radius: var(--r-full);
+  background: var(--primary); color: var(--primary-fg); box-shadow: var(--shadow-md); cursor: pointer;
+  transition: transform var(--fast) var(--ease);
+}
+.fab:active { transform: scale(0.94); }
+.fab svg { width: 22px; stroke-width: 2.4; }
+
+@media (max-width: 900px) { .bottomnav { display: flex; } }
+
+/* `hidden` must always win over display rules (overlays, hints). */
+[hidden] { display: none !important; }
+
+/* Mobile top bar: icon-only primary action, no horizontal overflow. */
+@media (max-width: 900px) {
+  html, body { overflow-x: hidden; }
+  .topbar { padding: var(--s-2) var(--s-3); gap: var(--s-2); }
+  .search-wrap { min-width: 0; }
+  .topbar-actions { gap: 2px; }
+  #newTaskBtn { padding: 0 var(--s-3); }
+  #newTaskBtn span { display: none; }
+  .toolbar { padding: var(--s-3); }
+}

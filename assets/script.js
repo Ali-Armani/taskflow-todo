@@ -263,3 +263,65 @@
     }
     return str;
   }
+
+  /* ============================ 2. UTILITIES ============================ */
+
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const $$ = (sel, root) => Array.prototype.slice.call((root || document).querySelectorAll(sel));
+
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+  /** Escape user content before injecting into innerHTML. */
+  function esc(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[c]);
+  }
+
+  /* --- Date helpers: all dates are stored as local "YYYY-MM-DD" strings --- */
+  function toISODate(date) {
+    const d = new Date(date);
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+  const todayISO = () => toISODate(new Date());
+  function addDaysISO(days) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return toISODate(d);
+  }
+  const isToday = (iso) => iso === todayISO();
+  const isTomorrow = (iso) => iso === addDaysISO(1);
+  const isOverdue = (task) => !!task.due && task.due < todayISO() && task.status !== "done";
+  function withinWeek(iso) {
+    return !!iso && iso >= todayISO() && iso <= addDaysISO(7);
+  }
+  /** Human-friendly due label ("Today", "Tomorrow" or a localized date). */
+  function formatDue(iso) {
+    if (!iso) return "";
+    if (isToday(iso)) return t("due.today");
+    if (isTomorrow(iso)) return t("due.tomorrow");
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(state.settings.lang === "de" ? "de-DE" : "en-GB", {
+      day: "2-digit",
+      month: "short",
+    });
+  }
+
+  /* Small inline SVG snippets reused in rendered markup. */
+  const ICON = {
+    check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>',
+    inbox: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5 5h14l2 8v6H3v-6z"/></svg>',
+    search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg>',
+    folder: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7a2 2 0 012-2h3l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2z"/></svg>',
+  };
+
+  

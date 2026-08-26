@@ -116,6 +116,92 @@
       </section>
     </aside>
 
+    <!-- ----------------------------- Main ----------------------------- -->
+    <main class="main" id="main">
+      <!-- Quick add -->
+      <form class="quickadd" id="quickAddForm">
+        <span class="quickadd-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+        </span>
+        <input
+          id="quickAddInput"
+          class="quickadd-input"
+          autocomplete="off"
+          data-i18n-placeholder="quickadd.placeholder"
+          data-i18n-aria="quickadd.label"
+        />
+        <button class="btn btn-primary" type="submit" data-i18n="common.add">Add</button>
+      </form>
+      <p class="quickadd-help" data-i18n="quickadd.help"></p>
+
+      <!-- Toolbar: filters + sort + view mode -->
+      <section class="toolbar" data-i18n-aria="filters.label">
+        <label class="field">
+          <span class="field-label" data-i18n="filter.status">Status</span>
+          <select class="input" id="filterStatus">
+            <option value="all" data-i18n="filter.any">Any</option>
+            <option value="todo" data-i18n="status.todo">To Do</option>
+            <option value="doing" data-i18n="status.doing">In Progress</option>
+            <option value="done" data-i18n="status.done">Done</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-label" data-i18n="filter.priority">Priority</span>
+          <select class="input" id="filterPriority">
+            <option value="all" data-i18n="filter.any">Any</option>
+            <option value="urgent" data-i18n="priority.urgent">Urgent</option>
+            <option value="high" data-i18n="priority.high">High</option>
+            <option value="medium" data-i18n="priority.medium">Medium</option>
+            <option value="low" data-i18n="priority.low">Low</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-label" data-i18n="filter.project">Project</span>
+          <select class="input" id="filterProject"></select>
+        </label>
+        <label class="field">
+          <span class="field-label" data-i18n="filter.tag">Tag</span>
+          <select class="input" id="filterTag"></select>
+        </label>
+        <label class="field">
+          <span class="field-label" data-i18n="filter.due">Due</span>
+          <select class="input" id="filterDue">
+            <option value="all" data-i18n="filter.any">Any</option>
+            <option value="today" data-i18n="due.today">Today</option>
+            <option value="tomorrow" data-i18n="due.tomorrow">Tomorrow</option>
+            <option value="week" data-i18n="due.week">This week</option>
+            <option value="overdue" data-i18n="due.overdue">Overdue</option>
+            <option value="none" data-i18n="due.none">No date</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-label" data-i18n="sort.label">Sort</span>
+          <select class="input" id="sortBy">
+            <option value="priority" data-i18n="sort.priority">Priority</option>
+            <option value="due" data-i18n="sort.due">Due date</option>
+            <option value="created" data-i18n="sort.created">Newest</option>
+            <option value="title" data-i18n="sort.title">Title</option>
+          </select>
+        </label>
+        <div class="toolbar-end">
+          <button class="btn btn-ghost" id="resetFiltersBtn" data-i18n="filter.reset">Reset</button>
+          <div class="seg" role="group" data-i18n-aria="view.label">
+            <button class="seg-btn" data-view="list">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+              <span data-i18n="view.list">List</span>
+            </button>
+            <button class="seg-btn" data-view="kanban">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="5" height="14" rx="2"/><rect x="10" y="5" width="5" height="10" rx="2"/><rect x="16" y="5" width="4" height="14" rx="2"/></svg>
+              <span data-i18n="view.kanban">Board</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Route content is rendered here -->
+      <div id="viewRoot" aria-live="polite"></div>
+    </main>
+
     
     
   <div>

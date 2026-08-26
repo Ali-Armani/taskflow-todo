@@ -212,6 +212,81 @@
     <button id="mobilePaletteBtn" data-i18n-aria="cmd.open"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 10l3 3-3 3"/></svg><span data-i18n="cmd.short">Cmd</span></button>
   </nav>
 
+  <!-- ============================ TASK MODAL ============================ -->
+    <div class="overlay" id="taskOverlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+        <header class="modal-head">
+          <h2 id="taskModalTitle" data-i18n="task.new">New task</h2>
+          <button class="icon-btn" id="taskCloseBtn" data-i18n-aria="common.close">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </header>
+        <form class="modal-body" id="taskForm" novalidate>
+          <label class="field">
+            <span class="field-label" data-i18n="task.title">Title</span>
+            <input class="input" id="taskTitle" required maxlength="120" />
+            <span class="error" id="taskTitleError" hidden data-i18n="task.titleRequired"></span>
+          </label>
+          <label class="field">
+            <span class="field-label" data-i18n="task.desc">Description</span>
+            <textarea class="input" id="taskDesc" rows="3" maxlength="600"></textarea>
+          </label>
+          <div class="grid-2">
+<label class="field">
+              <span class="field-label" data-i18n="filter.priority">Priority</span>
+              <select class="input" id="taskPriority">
+                <option value="urgent" data-i18n="priority.urgent"></option>
+                <option value="high" data-i18n="priority.high"></option>
+                <option value="medium" selected data-i18n="priority.medium"></option>
+                <option value="low" data-i18n="priority.low"></option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label" data-i18n="filter.status">Status</span>
+              <select class="input" id="taskStatus">
+                <option value="todo" data-i18n="status.todo"></option>
+                <option value="doing" data-i18n="status.doing"></option>
+                <option value="done" data-i18n="status.done"></option>
+              </select>
+            </label>
+          </div>
+          <div class="field">
+            <span class="field-label" data-i18n="task.due">Due date</span>
+            <div class="row">
+              <button class="btn btn-soft" type="button" data-due="today" data-i18n="due.today"></button>
+              <button class="btn btn-soft" type="button" data-due="tomorrow" data-i18n="due.tomorrow"></button>
+              <button class="btn btn-soft" type="button" data-due="clear" data-i18n="common.clear"></button>
+              <input class="input" id="taskDue" type="date" data-i18n-aria="task.due" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <label class="field">
+              <span class="field-label" data-i18n="filter.project">Project</span>
+              <select class="input" id="taskProject"></select>
+            </label>
+            <label class="field">
+              <span class="field-label" data-i18n="task.tags">Tags</span>
+              <input class="input" id="taskTags" data-i18n-placeholder="task.tagsPlaceholder" />
+            </label>
+          </div>
+
+          <div class="field">
+            <span class="field-label" data-i18n="task.subtasks">Subtasks</span>
+            <ul class="subtask-edit" id="subtaskEditList"></ul>
+            <div class="row">
+              <input class="input" id="subtaskInput" data-i18n-placeholder="task.subtaskAdd" maxlength="120" />
+              <button class="btn btn-soft" type="button" id="subtaskAddBtn" data-i18n="common.add"></button>
+            </div>
+          </div>
+
+          <footer class="modal-foot">
+            <button class="btn btn-ghost" type="button" id="taskCancelBtn" data-i18n="common.cancel"></button>
+            <button class="btn btn-primary" type="submit" id="taskSaveBtn" data-i18n="common.save"></button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
   
 </body>
 </html>

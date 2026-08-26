@@ -497,3 +497,334 @@
     return dismiss;
   }
 
+  /* ============================ 6. RENDERING ============================ */
+
+  /** Full re-render: chrome (sidebar, toolbar, nav) + the active route view. */
+  function render() {
+    document.documentElement.setAttribute("data-theme", state.settings.theme);
+    document.documentElement.lang = state.settings.lang;
+    applyTranslations();
+    renderSidebar();
+    renderToolbar();
+    renderNavState();
+    renderRoute();
+  }
+
+  /** Replace every [data-i18n*] node's text with the current language. */
+  function applyTranslations() {
+    $$("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n)));
+    $$("[data-i18n-placeholder]").forEach((el) => (el.placeholder = t(el.dataset.i18nPlaceholder)));
+    $$("[data-i18n-aria]").forEach((el) => el.setAttribute("aria-label", t(el.dataset.i18nAria)));
+    $$("[data-lang]").forEach((btn) =>
+      btn.setAttribute("aria-pressed", String(btn.dataset.lang === state.settings.lang)),
+    );
+    $$("[data-view]").forEach((btn) =>
+      btn.setAttribute("aria-pressed", String(btn.dataset.view === state.settings.view)),
+    );
+    document.title = "TaskFlow — " + t("nav." + (state.settings.route === "upcoming" ? "upcoming" : state.settings.route));
+  }
+
+  function renderNavState() {
+    $$("[data-route]").forEach((el) => {
+      if (el.dataset.route === state.settings.route) el.setAttribute("aria-current", "page");
+      else el.removeAttribute("aria-current");
+    });
+    els.countAll.textContent = state.tasks.length;
+  }
+
+  function renderSidebar() {
+    // Projects as filter chips (with delete)
+    els.projectList.innerHTML = state.projects.length
+      ? state.projects
+          .map((p) => {
+            const active = state.settings.filters.project === p.id;
+            return (
+              '<span class="chip" role="group"><button type="button" class="chip-label" data-project-filter="' +
+              esc(p.id) +
+              '" aria-pressed="' +
+              active +
+              '" style="all:unset;cursor:pointer">' +
+              esc(p.name) +
+              '</button><span class="x" role="button" tabindex="0" data-project-delete="' +
+              esc(p.id) +
+              '" aria-label="' +
+              esc(t("common.remove") + " " + p.name) +
+              '">' +
+              '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></span></span>'
+            );
+          })
+          .join("")
+      : '<p class="nav-hint">' + esc(t("projects.empty")) + "</p>";
+
+    // Tag chips
+    const tags = allTags();
+    els.tagList.innerHTML = tags
+      .map(
+        (tag) =>
+          '<button type="button" class="chip" data-tag-filter="' +
+          esc(tag) +
+          '" aria-pressed="' +
+          (state.settings.filters.tag === tag) +
+          '">#' +
+          esc(tag) +
+          "</button>",
+      )
+      .join("");
+    els.tagEmptyHint.hidden = tags.length > 0;
+  }
+
+  /** Keep selects in sync with state (options + current values). */
+  function renderToolbar() {
+    const f = state.settings.filters;
+    const projectOptions =
+      '<option value="all">' +
+      esc(t("filter.any")) +
+      "</option>" +
+      '<option value="none">' +
+      esc(t("task.noProject")) +
+      "</option>" +
+      state.projects.map((p) => '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>").join("");
+    els.filterProject.innerHTML = projectOptions;
+    els.filterProject.value = f.project;
+
+    els.filterTag.innerHTML =
+      '<option value="all">' +
+      esc(t("filter.any")) +
+      "</option>" +
+      allTags().map((tag) => '<option value="' + esc(tag) + '">#' + esc(tag) + "</option>").join("");
+    els.filterTag.value = f.tag;
+
+    els.filterStatus.value = f.status;
+    els.filterPriority.value = f.priority;
+    els.filterDue.value = f.due;
+    els.sortBy.value = state.settings.sort;
+    els.searchInput.value = search;
+  }
+
+  /** Route dispatcher for the main content area. */
+  function renderRoute() {
+    const root = els.viewRoot;
+    root.innerHTML = "";
+    const route = state.settings.route;
+
+    if (route === "projects") return root.appendChild(renderProjectsView());
+    if (route === "today") return root.appendChild(renderTodayView());
+
+    const pool =
+      route === "upcoming"
+        ? state.tasks.filter((task) => task.due && task.due >= todayISO())
+        : state.tasks;
+    const tasks = visibleTasks(pool);
+    const frag = document.createDocumentFragment();
+    const head = document.createElement("div");
+    head.className = "section-head";
+    head.innerHTML =
+      "<h2>" + esc(t("nav." + route)) + '</h2><span class="muted">' + esc(t("count.tasks", { n: tasks.length })) + "</span>";
+    frag.appendChild(head);
+    frag.appendChild(renderTaskCollection(tasks, pool.length));
+    root.appendChild(frag);
+  }
+
+  /** Today dashboard: greeting, progress, stats, today's list. */
+  function renderTodayView() {
+    const stats = todayStats();
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? t("greeting.morning") : hour < 18 ? t("greeting.afternoon") : t("greeting.evening");
+    const wrap = document.createElement("div");
+    wrap.className = "dash";
+    wrap.innerHTML =
+      '<section class="hero">' +
+      '<p class="eyebrow">' + esc(t("dash.eyebrow")) + "</p>" +
+      "<h1>" + esc(greeting) + "</h1>" +
+      "<p>" + esc(t("dash.subtitle")) + "</p>" +
+      '<div class="progress"><div class="progress-top"><span>' +
+      esc(t("dash.progress")) +
+      "</span><span>" + stats.percent + "%</span></div>" +
+      '<div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
+      stats.percent + '"><div class="progress-bar" id="progressBar"></div></div></div>' +
+      "</section>" +
+      '<div class="stats">' +
+      statCard("stat.today", stats.total, "") +
+      statCard("stat.completed", stats.completed, "is-done") +
+      statCard("stat.remaining", stats.remaining, "") +
+      statCard("stat.overdue", stats.overdue, "is-overdue") +
+      "</div>";
+
+    const todays = visibleTasks(state.tasks.filter((task) => isToday(task.due) || isOverdue(task)));
+    const head = document.createElement("div");
+    head.className = "section-head";
+    head.innerHTML =
+      "<h2>" + esc(t("dash.todayTasks")) + '</h2><span class="muted">' +
+      esc(t("count.tasks", { n: todays.length })) + "</span>";
+    wrap.appendChild(head);
+    wrap.appendChild(
+      renderTaskCollection(todays, state.tasks.filter((task) => isToday(task.due) || isOverdue(task)).length, {
+        emptyTitle: "empty.todayTitle",
+        emptyBody: "empty.todayBody",
+      }),
+    );
+
+    // Animate the bar after paint so the CSS transition runs.
+    requestAnimationFrame(() => {
+      const bar = $("#progressBar", wrap);
+      if (bar) bar.style.width = stats.percent + "%";
+    });
+    return wrap;
+  }
+
+  function statCard(key, value, modifier) {
+    return (
+      '<div class="stat ' + modifier + '"><p class="k">' + esc(t(key)) + '</p><p class="v">' + value + "</p></div>"
+    );
+  }
+
+  /**
+   * Render either the list or the kanban board, plus the correct
+   * empty / no-results state.
+   */
+  function renderTaskCollection(tasks, poolLength, labels) {
+    const opts = labels || {};
+    if (!tasks.length) {
+      if (!poolLength && !search && !hasActiveFilters()) {
+        return emptyState(ICON.inbox, t(opts.emptyTitle || "empty.title"), t(opts.emptyBody || "empty.body"));
+      }
+      return emptyState(ICON.search, t("noresults.title"), t("noresults.body"));
+    }
+    return state.settings.view === "kanban" ? renderBoard(tasks) : renderList(tasks);
+  }
+
+  function hasActiveFilters() {
+    const f = state.settings.filters;
+    return Object.keys(f).some((k) => f[k] !== "all");
+  }
+
+  function emptyState(icon, title, body) {
+    const el = document.createElement("div");
+    el.className = "state";
+    el.innerHTML = icon + "<h3>" + esc(title) + "</h3><p>" + esc(body) + "</p>";
+    return el;
+  }
+
+  function renderList(tasks) {
+    const ul = document.createElement("ul");
+    ul.className = "tasks";
+    tasks.forEach((task) => ul.appendChild(renderTaskCard(task, false)));
+    return ul;
+  }
+
+  function renderBoard(tasks) {
+    const board = document.createElement("div");
+    board.className = "board";
+    STATUSES.forEach((status) => {
+      const col = document.createElement("section");
+      col.className = "column";
+      col.dataset.column = status;
+      const items = tasks.filter((task) => task.status === status);
+      col.innerHTML =
+        '<header class="column-head"><span>' + esc(t("status." + status)) + "</span><span>" + items.length + "</span></header>";
+      const body = document.createElement("div");
+      body.className = "column-body";
+      items.forEach((task) => body.appendChild(renderTaskCard(task, true)));
+      col.appendChild(body);
+      board.appendChild(col);
+    });
+    return board;
+  }
+
+  /** One task card — used by both list and board views. */
+  function renderTaskCard(task, draggable) {
+    const li = document.createElement(draggable ? "article" : "li");
+    li.className =
+      "task" + (task.status === "done" ? " is-done" : "") + (task.id === selectedId ? " is-selected" : "");
+    li.dataset.id = task.id;
+    li.tabIndex = 0;
+    if (draggable) li.draggable = true;
+
+    const doneSubs = task.subtasks.filter((s) => s.done).length;
+    const meta = [];
+    meta.push('<span class="badge p-' + task.priority + '">' + esc(t("priority." + task.priority)) + "</span>");
+    if (task.due) {
+      meta.push(
+        '<span class="badge ' + (isOverdue(task) ? "overdue" : "neutral") + '">' +
+          (isOverdue(task) ? esc(t("due.overdue")) + " · " : "") +
+          esc(formatDue(task.due)) +
+          "</span>",
+      );
+    }
+    if (task.projectId && getProject(task.projectId)) {
+      meta.push('<span class="badge neutral">' + esc(getProject(task.projectId).name) + "</span>");
+    }
+    if (state.settings.view === "kanban" || task.status === "doing") {
+      meta.push('<span class="badge neutral">' + esc(t("status." + task.status)) + "</span>");
+    }
+    task.tags.forEach((tag) => meta.push('<span class="badge neutral">#' + esc(tag) + "</span>"));
+
+    li.innerHTML =
+      '<button type="button" class="check" data-action="toggle" aria-pressed="' +
+      (task.status === "done") +
+      '" aria-label="' + esc(t("a11y.complete")) + '">' + ICON.check + "</button>" +
+      '<div class="task-main">' +
+      '<p class="task-title">' + esc(task.title) + "</p>" +
+      (task.description ? '<p class="task-desc">' + esc(task.description) + "</p>" : "") +
+      '<div class="task-meta">' + meta.join("") + "</div>" +
+      (task.subtasks.length
+        ? '<div class="subprogress"><span class="field-label">' +
+          esc(t("subtasks.progress", { done: doneSubs, total: task.subtasks.length })) +
+          '</span><div class="track"><div class="fill" style="width:' +
+          Math.round((doneSubs / task.subtasks.length) * 100) +
+          '%"></div></div></div>' +
+          '<ul class="subtasks">' +
+          task.subtasks
+            .map(
+              (sub) =>
+                '<li class="subtask' + (sub.done ? " done" : "") + '"><button type="button" data-action="subtask" data-sub="' +
+                esc(sub.id) +
+                '" aria-pressed="' + !!sub.done + '"><span class="box">' + ICON.check +
+                '</span><span class="label">' + esc(sub.title) + "</span></button></li>",
+            )
+            .join("") +
+          "</ul>"
+        : "") +
+      "</div>" +
+      '<div class="task-actions">' +
+      '<button type="button" class="icon-btn" data-action="edit" aria-label="' + esc(t("a11y.edit")) + '">' + ICON.edit + "</button>" +
+      '<button type="button" class="icon-btn" data-action="delete" aria-label="' + esc(t("a11y.delete")) + '">' + ICON.trash + "</button>" +
+      "</div>";
+    return li;
+  }
+
+  function renderProjectsView() {
+    const wrap = document.createElement("div");
+    const head = document.createElement("div");
+    head.className = "section-head";
+    head.innerHTML = "<h2>" + esc(t("nav.projects")) + "</h2>";
+    wrap.appendChild(head);
+
+    if (!state.projects.length) {
+      wrap.appendChild(emptyState(ICON.folder, t("projects.empty"), t("projects.emptyBody")));
+      return wrap;
+    }
+
+    const grid = document.createElement("div");
+    grid.className = "projects";
+    state.projects.forEach((project) => {
+      const tasks = state.tasks.filter((task) => task.projectId === project.id);
+      const done = tasks.filter((task) => task.status === "done").length;
+      const percent = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+      const card = document.createElement("article");
+      card.className = "card project-card";
+      card.innerHTML =
+        "<h3>" + esc(project.name) + "</h3>" +
+        '<p class="meta">' + tasks.length + " " + esc(t("projects.tasks")) + " · " + done + " " +
+        esc(t("projects.done")) + " · " + (tasks.length - done) + " " + esc(t("projects.remaining")) + "</p>" +
+        '<div class="progress-track"><div class="progress-bar" style="width:' + percent + '%"></div></div>' +
+        '<button type="button" class="btn btn-soft" data-project-open="' + esc(project.id) + '">' +
+        esc(t("nav.all")) + "</button>";
+      grid.appendChild(card);
+    });
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  
+ 

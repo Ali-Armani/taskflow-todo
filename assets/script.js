@@ -466,4 +466,34 @@
     };
   }
 
- 
+   /* ============================= 5. TOASTS ============================== */
+
+  function toast(message, options) {
+    const opts = options || {};
+    const node = document.createElement("div");
+    node.className = "toast " + (opts.type || "");
+    node.setAttribute("role", "status");
+    node.innerHTML =
+      '<span class="dot"></span><span class="msg">' +
+      esc(message) +
+      "</span>" +
+      (opts.actionLabel ? '<button type="button" class="undo">' + esc(opts.actionLabel) + "</button>" : "");
+
+    if (opts.actionLabel) {
+      $(".undo", node).addEventListener("click", () => {
+        opts.onAction && opts.onAction();
+        dismiss();
+      });
+    }
+    els.toasts.appendChild(node);
+
+    const timer = setTimeout(dismiss, opts.duration || 3600);
+    function dismiss() {
+      clearTimeout(timer);
+      if (!node.isConnected) return;
+      node.classList.add("leaving");
+      setTimeout(() => node.remove(), 200);
+    }
+    return dismiss;
+  }
+

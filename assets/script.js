@@ -393,3 +393,77 @@
     };
   }
 
+  /* ========================= 4. STATE & SELECTORS ======================= */
+
+  let state = defaultState();
+  let search = "";
+  let selectedId = null;
+  const els = {};
+
+  const persist = () => Storage.save(state);
+
+  const getTask = (id) => state.tasks.find((task) => task.id === id) || null;
+  const getProject = (id) => state.projects.find((p) => p.id === id) || null;
+
+  /** All tags currently in use, alphabetically sorted. */
+  function allTags() {
+    const set = new Set();
+    state.tasks.forEach((task) => task.tags.forEach((tag) => set.add(tag)));
+    return Array.from(set).sort();
+  }
+
+  /** Apply search + every active filter to the task collection. */
+  function filterTasks(tasks) {
+    const f = state.settings.filters;
+    const q = search.trim().toLowerCase();
+    return tasks.filter((task) => {
+      if (q && (task.title + " " + task.description).toLowerCase().indexOf(q) === -1) return false;
+      if (f.status !== "all" && task.status !== f.status) return false;
+      if (f.priority !== "all" && task.priority !== f.priority) return false;
+      if (f.project !== "all" && (task.projectId || "none") !== f.project) return false;
+      if (f.tag !== "all" && task.tags.indexOf(f.tag) === -1) return false;
+      if (f.due !== "all") {
+        if (f.due === "today" && !isToday(task.due)) return false;
+        if (f.due === "tomorrow" && !isTomorrow(task.due)) return false;
+        if (f.due === "week" && !withinWeek(task.due)) return false;
+        if (f.due === "overdue" && !isOverdue(task)) return false;
+        if (f.due === "none" && task.due) return false;
+      }
+      return true;
+    });
+  }
+
+  /** Sort a list of tasks according to the active sort option. */
+  function sortTasks(tasks) {
+    const mode = state.settings.sort;
+    return tasks.slice().sort((a, b) => {
+      if (mode === "priority") {
+        const diff = PRIORITY_WEIGHT[a.priority] - PRIORITY_WEIGHT[b.priority];
+        if (diff) return diff;
+        return (a.due || "9999") < (b.due || "9999") ? -1 : 1;
+      }
+      if (mode === "due") {
+        return (a.due || "9999-99-99").localeCompare(b.due || "9999-99-99");
+      }
+      if (mode === "title") return a.title.localeCompare(b.title);
+      return b.createdAt - a.createdAt;
+    });
+  }
+
+  const visibleTasks = (tasks) => sortTasks(filterTasks(tasks || state.tasks));
+
+  /** Aggregate numbers powering the Today dashboard. */
+  function todayStats() {
+    const todays = state.tasks.filter((task) => isToday(task.due));
+    const completed = todays.filter((task) => task.status === "done").length;
+    const overdue = state.tasks.filter(isOverdue).length;
+    return {
+      total: todays.length,
+      completed,
+      remaining: todays.length - completed,
+      overdue,
+      percent: todays.length ? Math.round((completed / todays.length) * 100) : 0,
+    };
+  }
+
+ 

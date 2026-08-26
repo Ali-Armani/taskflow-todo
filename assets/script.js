@@ -953,3 +953,93 @@
     return { title, tags, priority, due };
   }
  
+   /* =========================== 8. TASK MODAL ============================ */
+
+  const modal = {
+    editingId: null,
+    subtasks: [],
+    lastFocus: null,
+
+    open(taskId) {
+      modal.editingId = taskId || null;
+      modal.lastFocus = document.activeElement;
+      const task = taskId ? getTask(taskId) : null;
+
+      $("#taskModalTitle").textContent = task ? t("task.edit") : t("task.new");
+      els.taskTitle.value = task ? task.title : "";
+      els.taskDesc.value = task ? task.description : "";
+      els.taskPriority.value = task ? task.priority : "medium";
+      els.taskStatus.value = task ? task.status : "todo";
+      els.taskDue.value = task && task.due ? task.due : "";
+      els.taskTags.value = task ? task.tags.join(", ") : "";
+      modal.subtasks = task ? task.subtasks.map((s) => Object.assign({}, s)) : [];
+
+      // Project select is rebuilt each open so new projects show up.
+      els.taskProject.innerHTML =
+        '<option value="">' + esc(t("task.noProject")) + "</option>" +
+        state.projects.map((p) => '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>").join("");
+      els.taskProject.value = task && task.projectId ? task.projectId : "";
+
+      els.taskTitleError.hidden = true;
+      modal.renderSubtasks();
+      els.taskOverlay.hidden = false;
+      setTimeout(() => els.taskTitle.focus(), 30);
+    },
+
+    close() {
+      els.taskOverlay.hidden = true;
+      modal.editingId = null;
+      if (modal.lastFocus && modal.lastFocus.focus) modal.lastFocus.focus();
+    },
+
+    get isOpen() {
+      return !els.taskOverlay.hidden;
+    },
+
+    renderSubtasks() {
+      els.subtaskEditList.innerHTML = modal.subtasks
+        .map(
+          (sub, i) =>
+            '<li><input type="checkbox" ' + (sub.done ? "checked" : "") + ' data-sub-toggle="' + i +
+            '" aria-label="' + esc(sub.title) + '"><span>' + esc(sub.title) +
+            '</span><button type="button" class="icon-btn" data-sub-remove="' + i + '" aria-label="' +
+            esc(t("common.remove")) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></li>',
+        )
+        .join("");
+    },
+
+    submit(event) {
+      event.preventDefault();
+      const title = els.taskTitle.value.trim();
+      if (!title) {
+        els.taskTitleError.hidden = false;
+        els.taskTitle.focus();
+        return;
+      }
+      const tags = els.taskTags.value
+        .split(",")
+        .map((s) => s.trim().replace(/^#/, "").toLowerCase())
+        .filter(Boolean);
+
+      const payload = {
+        title,
+        description: els.taskDesc.value.trim(),
+        priority: els.taskPriority.value,
+        status: els.taskStatus.value,
+        due: els.taskDue.value || null,
+        projectId: els.taskProject.value || null,
+        tags,
+        subtasks: modal.subtasks,
+      };
+
+      if (modal.editingId) {
+        updateTask(modal.editingId, payload);
+        toast(t("toast.updated"), { type: "success" });
+      } else {
+        createTask(payload);
+      }
+      modal.close();
+    },
+  };
+
+ 

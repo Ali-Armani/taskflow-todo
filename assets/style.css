@@ -1,4 +1,4 @@
-/* ------------------------------- TOKENS ------------------------------ */
+/* ------------------------------- 1. TOKENS ------------------------------ */
 :root {
   /* palette — deep slate + teal accent, warm amber highlights */
   --teal-400: #2dd4bf;
@@ -129,7 +129,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 
 .only-mobile { display: none; }
 
-/* --------------------------- PRIMITIVES ----------------------------- */
+/* --------------------------- 3. PRIMITIVES ----------------------------- */
 .btn {
   display: inline-flex; align-items: center; gap: var(--s-2);
   min-height: 40px; padding: 0 var(--s-4);

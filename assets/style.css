@@ -437,3 +437,11 @@ kbd {
 .toast .msg { flex: 1; min-width: 0; }
 .toast .undo { background: none; border: 0; color: var(--primary); font-weight: 800; cursor: pointer; padding: 4px; }
 
+/* --------------------------- 6. UI STATES ------------------------------ */
+.state { display: grid; gap: var(--s-3); justify-items: center; text-align: center; padding: var(--s-10) var(--s-5); border-radius: var(--r-lg); border: 1px dashed var(--border-strong); background: var(--surface); }
+.state svg { width: 30px; color: var(--text-muted); }
+.state h3 { font-size: var(--fs-lg); }
+.state p { font-size: var(--fs-sm); color: var(--text-muted); max-width: 42ch; }
+.state.error { border-color: var(--danger); }
+.state.error svg { color: var(--danger); }
+
